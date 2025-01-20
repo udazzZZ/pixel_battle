@@ -116,6 +116,17 @@ class ClientHandler(Thread):
                     case 'exit':
                         self.exit_game(self.room, self.client, self.name)
 
+                    case 'game':
+                        print('Нажата кнопка')
+                        self.room.broadcast(dict(data='{}'.format(data['data']),
+                                                 msgtype='game'))
+
+                    case 'chat':
+                        message = data['data']
+                        self.room.broadcast(dict(data=f'{self.name}: {message}'),
+                                            self.client)
+                        self.client.send(pickle.dumps(dict(data=f'You: {message}')))
+
             except (ConnectionError, OSError):
                 print(f"Игрок {self.name} отключился.")
                 break
