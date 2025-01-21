@@ -118,6 +118,7 @@ class ClientHandler(Thread):
 
                     case 'game':
                         print('Нажата кнопка')
+                        print(data['data'])
                         self.room.broadcast(dict(data='{}'.format(data['data']),
                                                  msgtype='game'))
 

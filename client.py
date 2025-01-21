@@ -10,6 +10,14 @@ from choose_room_window import Ui_RoomWindow
 from choose_color_window import Ui_ChooseColorWindow
 from game_room import Ui_GameWindow
 
+# TODO:
+# EXIT
+# SEND
+# TIMER
+# реализовать логику начала игры только после того, как подключились хотя бы два игрока
+# исправить ошибку с отправкой сообщений в чат
+# запретить полноэкранный режим
+
 class Communication(QObject):
     free_rooms_updater = pyqtSignal(list)
     chat_updater = pyqtSignal(str)
@@ -205,7 +213,7 @@ class GameWindow(QMainWindow, Ui_GameWindow):
         self.color = color
         self.setupUi(self)
 
-        self.setWindowTitle(f"{self.room}. {self.name}.")
+        self.setWindowTitle(f"{self.room}. {self.name}")
         self.lineEdit.setPlaceholderText("Введите сообщение...")
         self.pushButton.clicked.connect(self.exit)
         self.pushButton_2.clicked.connect(self.send)
@@ -214,13 +222,13 @@ class GameWindow(QMainWindow, Ui_GameWindow):
 
         self.buttons_map = {}
 
-        for x in range(30):
-            for y in range(30):
+        for x in range(25):
+            for y in range(25):
                 cell = QPushButton()
                 cell.setMaximumSize(25, 25)
                 cell.setMinimumSize(25, 25)
                 cell.clicked.connect(lambda clicked, X=x, Y=y: self.game_clicker(X, Y))
-                cell.setStyleSheet('background-color: white; border: 1px solid black;')
+                cell.setStyleSheet('background-color: white; border: 1px solid black; padding: 0;')
                 self.gridLayout.addWidget(cell, x, y, 1, 1)
                 self.buttons_map[(x, y)] = cell
 
@@ -237,16 +245,15 @@ class GameWindow(QMainWindow, Ui_GameWindow):
                                       msgtype='exit'))
 
     def game_clicker(self, X, Y):
-        self.client.send_message(dict(data=f'{X} {Y}',
+        print(self.color)
+        self.client.send_message(dict(data=f'{X} {Y} {self.color}',
                                       msgtype='game'))
 
     def update_game(self, coordinates):
-        coords = coordinates.split()
-        print(coords)
-        x = int(coords[0])
-        y = int(coords[1])
-        cell: QPushButton = self.buttons_map[(x, y)]
-        cell.setStyleSheet(f'background-color: {self.color}]; border: 1px solid black;')
+        x, y, color = tuple(coordinates.split())
+        print(x, y, color)
+        cell: QPushButton = self.buttons_map[(int(x), int(y))]
+        cell.setStyleSheet(f'background-color: {color}; border: 1px solid black; padding: 0;')
         cell.setEnabled(False)
 
 def main():

@@ -41,13 +41,13 @@ class Ui_GameWindow(object):
         font.setPointSize(12)
         font.setBold(True)
         self.pushButton.setFont(font)
-        self.pushButton.setStyleSheet("QPushButton {\n"
+        self.pushButton.setStyleSheet("#pushButton {\n"
 "    background-color: rgb(0, 0, 0);\n"
 "    border-radius: 5px;\n"
 "    padding: 10px 10px;\n"
 "    color: rgb(255, 255, 255);\n"
 "}\n"
-"QPushButton:hover {\n"
+"#pushButton:hover {\n"
 "    color: rgb(0, 0, 0);\n"
 "    border: 1px  solid rgb(55, 107, 113);\n"
 "    cursor: pointer;\n"
@@ -78,13 +78,13 @@ class Ui_GameWindow(object):
         font.setPointSize(12)
         font.setBold(True)
         self.pushButton_2.setFont(font)
-        self.pushButton_2.setStyleSheet("QPushButton {\n"
+        self.pushButton_2.setStyleSheet("#pushButton_2 {\n"
 "    background-color: rgb(0, 0, 0);\n"
 "    border-radius: 5px;\n"
 "    padding: 10px 10px;\n"
 "    color: rgb(255, 255, 255);\n"
 "}\n"
-"QPushButton:hover {\n"
+"#pushButton_2:hover {\n"
 "    color: rgb(0, 0, 0);\n"
 "    border: 1px  solid rgb(55, 107, 113);\n"
 "    cursor: pointer;\n"

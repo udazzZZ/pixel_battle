@@ -53,13 +53,13 @@ QLineEdit {
         </font>
        </property>
        <property name="styleSheet">
-        <string notr="true">QPushButton {
+        <string notr="true">#pushButton {
 	background-color: rgb(0, 0, 0);
 	border-radius: 5px;
 	padding: 10px 10px;
 	color: rgb(255, 255, 255);
 }
-QPushButton:hover {
+#pushButton:hover {
 	color: rgb(0, 0, 0);
 	border: 1px  solid rgb(55, 107, 113);
 	cursor: pointer;
@@ -109,13 +109,13 @@ QPushButton:hover {
         </font>
        </property>
        <property name="styleSheet">
-        <string notr="true">QPushButton {
+        <string notr="true">#pushButton_2 {
 	background-color: rgb(0, 0, 0);
 	border-radius: 5px;
 	padding: 10px 10px;
 	color: rgb(255, 255, 255);
 }
-QPushButton:hover {
+#pushButton_2:hover {
 	color: rgb(0, 0, 0);
 	border: 1px  solid rgb(55, 107, 113);
 	cursor: pointer;
