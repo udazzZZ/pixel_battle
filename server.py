@@ -27,6 +27,7 @@ class GameRoom:
                                       msgtype='continue_game')))
 
     def exit_room(self, client, client_name):
+        print(client_name)
         client_idx = self.clients.index(client)
         self.clients.pop(client_idx)
         self.clients_names.pop(client_idx)
@@ -35,17 +36,21 @@ class GameRoom:
         self.broadcast(dict(data=f"Игрок {client_name} покинул игру.",
                             msgtype='chat'),
                        client)
+        client.send(pickle.dumps(dict(data='',
+                                      msgtype='exit_app')))
         if len(self.clients) == 1:
             self.end_game()
 
-    def end_game(self, reason=None):
-        if reason == 'timeout':
-            self.broadcast(dict(data="Время вышло. Игра завершена.\n"
-                                     "Итоговое изображение уже у вас.",
-                                msgtype='chat'))
+    def end_game(self):
+        print('Игра завершена')
         self.broadcast(dict(data="",
                             msgtype='end_game'))
         self.is_active = False
+
+    def timeout(self):
+        self.broadcast(dict(data="Время вышло. Игра завершена.\n"
+                                 "Итоговое изображение уже у вас.",
+                            msgtype='chat'))
 
 class GameServer:
     def __init__(self, host, port):
@@ -168,18 +173,18 @@ class ClientHandler(Thread):
             self.client.send(pickle.dumps(dict(data='Цвет уже занят',
                                                msgtype='color_not_free')))
 
-    def exit_game(self, room, player, name):
-        packet = dict(data=f"Игрок {name} покинул игру. ",
-                      msgtype='chat')
-        room.broadcast(packet, player)
-        print(f"{name} disconnected")
-        cur_player_idx = room.clients.index(player)
-        room.clients.pop(cur_player_idx)
-        room.clients_names.pop(cur_player_idx)
-        room.ready_clients_count -= 1
-        room.colors.pop(cur_player_idx)
-        self.client.send(pickle.dumps(dict(data='',
-                                           msgtype='end_game')))
+    # def exit_game(self, room, player, name):
+    #     packet = dict(data=f"Игрок {name} покинул игру. ",
+    #                   msgtype='chat')
+    #     room.broadcast(packet, player)
+    #     print(f"{name} disconnected")
+    #     cur_player_idx = room.clients.index(player)
+    #     room.clients.pop(cur_player_idx)
+    #     room.clients_names.pop(cur_player_idx)
+    #     room.ready_clients_count -= 1
+    #     room.colors.pop(cur_player_idx)
+    #     self.client.send(pickle.dumps(dict(data='',
+    #                                        msgtype='end_game')))
 
 def main():
     game_server = GameServer('127.0.0.1', port=3434)

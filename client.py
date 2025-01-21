@@ -1,7 +1,8 @@
 import socket
 import pickle
 import threading
-from threading import Thread
+import time
+
 from PyQt6.QtCore import pyqtSignal, QObject, pyqtSlot
 from PyQt6.QtWidgets import QApplication, QMainWindow, QColorDialog, QPushButton
 from queue import Queue
@@ -13,7 +14,6 @@ from game_room import Ui_GameWindow
 # TODO:
 # EXIT
 # TIMER
-# запретить полноэкранный режим
 # отправлять изображение клиентам после конца игры
 
 class Communication(QObject):
@@ -25,6 +25,7 @@ class Communication(QObject):
     start_game = pyqtSignal(str)
     end_game = pyqtSignal()
     continue_game = pyqtSignal(dict)
+    exit_app = pyqtSignal()
 
 class GameClient:
     def __init__(self, host, port, communication):
@@ -90,6 +91,9 @@ class GameClient:
 
                     case 'game':
                         self.comm.game_updater.emit(data['data'])
+
+                    case 'exit_app':
+                        self.comm.exit_app.emit()
 
             except (ConnectionError, OSError):
                 print("Вы были отключены от сервера.")
@@ -176,8 +180,7 @@ class Color(QMainWindow, Ui_ChooseColorWindow):
 
     def join_game(self):
         print('Окно создано')
-        self.game = GameWindow(self.reg_window,
-                               self.choose_room_window,
+        self.game = GameWindow(self.choose_room_window,
                                self.comm,
                                self.client,
                                self.name,
@@ -207,9 +210,8 @@ class Color(QMainWindow, Ui_ChooseColorWindow):
         self.choose_room_text.append(message)
 
 class GameWindow(QMainWindow, Ui_GameWindow):
-    def __init__(self, reg_window, choose_room_window, comm, client, name, room, color):
+    def __init__(self, choose_room_window, comm, client, name, room, color):
         super().__init__()
-        self.reg_window = reg_window
         self.choose_room_window = choose_room_window
         self.comm = comm
         self.client = client
@@ -229,6 +231,7 @@ class GameWindow(QMainWindow, Ui_GameWindow):
         self.comm.start_game.connect(self.start_game)
         self.comm.end_game.connect(self.end_game)
         self.comm.continue_game.connect(self.continue_game)
+        self.comm.exit_app.connect(self.exit_app)
 
         self.buttons_map = {}
 
@@ -278,8 +281,13 @@ class GameWindow(QMainWindow, Ui_GameWindow):
                                       msgtype='exit'))
 
     def end_game(self):
-        self.hide()
-        self.choose_room_window.show()
+        self.textEdit.append("Игра окончена!")
+        for x in range(25):
+            for y in range(25):
+                cell = self.buttons_map[(x, y)]
+                cell.setStyleSheet('background-color: white; border: 1px solid black; padding: 0;')
+                cell.setEnabled(False)
+        self.pushButton_2.setEnabled(False)
 
     def game_clicker(self, X, Y):
         print(self.color)
@@ -301,6 +309,11 @@ class GameWindow(QMainWindow, Ui_GameWindow):
     @pyqtSlot()
     def closeEvent(self, event):
         self.exit()
+
+    @pyqtSlot()
+    def exit_app(self):
+        self.hide()
+        self.choose_room_window.show()
 
 def main():
     app = QApplication([])
