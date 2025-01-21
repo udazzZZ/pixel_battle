@@ -58,6 +58,7 @@ QLineEdit {
 	border-radius: 5px;
 	padding: 10px 10px;
 	color: rgb(255, 255, 255);
+	margin: 10px;
 }
 #pushButton:hover {
 	color: rgb(0, 0, 0);
@@ -114,6 +115,7 @@ QLineEdit {
 	border-radius: 5px;
 	padding: 10px 10px;
 	color: rgb(255, 255, 255);
+	margin: 10px;
 }
 #pushButton_2:hover {
 	color: rgb(0, 0, 0);
@@ -137,7 +139,9 @@ QLineEdit {
        </property>
        <property name="styleSheet">
         <string notr="true">border-radius: 10px;
-border: 1px solid black;</string>
+border: 1px solid black;
+margin-right: 5px;
+margin-left: 5px;</string>
        </property>
       </widget>
      </item>

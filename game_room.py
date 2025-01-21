@@ -46,6 +46,7 @@ class Ui_GameWindow(object):
 "    border-radius: 5px;\n"
 "    padding: 10px 10px;\n"
 "    color: rgb(255, 255, 255);\n"
+"    margin: 10px;\n"
 "}\n"
 "#pushButton:hover {\n"
 "    color: rgb(0, 0, 0);\n"
@@ -83,6 +84,7 @@ class Ui_GameWindow(object):
 "    border-radius: 5px;\n"
 "    padding: 10px 10px;\n"
 "    color: rgb(255, 255, 255);\n"
+"    margin: 10px;\n"
 "}\n"
 "#pushButton_2:hover {\n"
 "    color: rgb(0, 0, 0);\n"
@@ -98,7 +100,9 @@ class Ui_GameWindow(object):
         font.setBold(True)
         self.lineEdit.setFont(font)
         self.lineEdit.setStyleSheet("border-radius: 10px;\n"
-"border: 1px solid black;")
+"border: 1px solid black;\n"
+"margin-right: 5px;\n"
+"margin-left: 5px;")
         self.lineEdit.setObjectName("lineEdit")
         self.gridLayout_2.addWidget(self.lineEdit, 3, 0, 1, 1)
         self.label = QtWidgets.QLabel(parent=self.gridLayoutWidget_2)

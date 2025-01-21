@@ -11,19 +11,22 @@ class GameRoom:
         self.clients_names: list = []
         self.colors = []
 
+        self.game_state = {}
+
     def broadcast(self, packet, except_client=None):
         for client in self.clients:
             if client != except_client:
                 client.send(pickle.dumps(packet))
 
     def start_game(self):
-        self.broadcast(dict(data="Игра началась.",
+        self.broadcast(dict(data="Игра началась!",
                             msgtype='start_game'))
 
-    def continue_game(self):
-        pass
+    def continue_game(self, client):
+        client.send(pickle.dumps(dict(data=self.game_state,
+                                      msgtype='continue_game')))
 
-    def exit_room(self, client, client_name, reason=None):
+    def exit_room(self, client, client_name):
         client_idx = self.clients.index(client)
         self.clients.pop(client_idx)
         self.clients_names.pop(client_idx)
@@ -35,10 +38,11 @@ class GameRoom:
         if len(self.clients) == 1:
             self.end_game()
 
-    def end_game(self):
-        self.broadcast(dict(data="Время вышло. Игра завершена.\n"
-                                 "Итоговое изображение уже у вас.",
-                            msgtype='chat'))
+    def end_game(self, reason=None):
+        if reason == 'timeout':
+            self.broadcast(dict(data="Время вышло. Игра завершена.\n"
+                                     "Итоговое изображение уже у вас.",
+                                msgtype='chat'))
         self.broadcast(dict(data="",
                             msgtype='end_game'))
         self.is_active = False
@@ -111,22 +115,26 @@ class ClientHandler(Thread):
                             self.room.start_game()
                             print('Начинаем игру')
                         elif self.room.ready_clients_count > 2:
-                            self.room.continue_game()
+                            self.room.continue_game(self.client)
 
                     case 'exit':
-                        self.exit_game(self.room, self.client, self.name)
+                        self.room.exit_room(self.client, self.name)
 
                     case 'game':
                         print('Нажата кнопка')
                         print(data['data'])
+                        x, y, color = tuple(data['data'].split())
+                        self.room.game_state[(int(x), int(y))] = color
                         self.room.broadcast(dict(data='{}'.format(data['data']),
                                                  msgtype='game'))
 
                     case 'chat':
                         message = data['data']
-                        self.room.broadcast(dict(data=f'{self.name}: {message}'),
+                        self.room.broadcast(dict(data=f'{self.name}: {message}',
+                                                 msgtype='chat'),
                                             self.client)
-                        self.client.send(pickle.dumps(dict(data=f'You: {message}')))
+                        self.client.send(pickle.dumps(dict(data=f'You: {message}',
+                                                           msgtype='chat')))
 
             except (ConnectionError, OSError):
                 print(f"Игрок {self.name} отключился.")

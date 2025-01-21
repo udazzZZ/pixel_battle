@@ -12,11 +12,9 @@ from game_room import Ui_GameWindow
 
 # TODO:
 # EXIT
-# SEND
 # TIMER
-# реализовать логику начала игры только после того, как подключились хотя бы два игрока
-# исправить ошибку с отправкой сообщений в чат
 # запретить полноэкранный режим
+# отправлять изображение клиентам после конца игры
 
 class Communication(QObject):
     free_rooms_updater = pyqtSignal(list)
@@ -24,6 +22,9 @@ class Communication(QObject):
     color_free = pyqtSignal()
     color_not_free = pyqtSignal(str)
     game_updater = pyqtSignal(str)
+    start_game = pyqtSignal(str)
+    end_game = pyqtSignal()
+    continue_game = pyqtSignal(dict)
 
 class GameClient:
     def __init__(self, host, port, communication):
@@ -70,13 +71,13 @@ class GameClient:
                         self.comm.chat_updater.emit(data['data'])
 
                     case 'start_game':
-                        pass
+                        self.comm.start_game.emit(data['data'])
 
                     case 'continue_game':
-                        pass
+                        self.comm.continue_game.emit(data['data'])
 
                     case 'end_game':
-                        pass
+                        self.comm.end_game.emit()
 
                     case 'selected_colors':
                         self.selected_colors.append(data['data'])
@@ -174,6 +175,7 @@ class Color(QMainWindow, Ui_ChooseColorWindow):
         self.show()
 
     def join_game(self):
+        print('Окно создано')
         self.game = GameWindow(self.reg_window,
                                self.choose_room_window,
                                self.comm,
@@ -195,10 +197,13 @@ class Color(QMainWindow, Ui_ChooseColorWindow):
 
     @pyqtSlot()
     def can_join(self):
+        self.choose_room_text.clear()
+        self.choose_room_text.append("You can join!")
         self.button_send.setEnabled(True)
 
     @pyqtSlot(str)
     def can_not_join(self, message):
+        self.choose_room_text.clear()
         self.choose_room_text.append(message)
 
 class GameWindow(QMainWindow, Ui_GameWindow):
@@ -217,8 +222,13 @@ class GameWindow(QMainWindow, Ui_GameWindow):
         self.lineEdit.setPlaceholderText("Введите сообщение...")
         self.pushButton.clicked.connect(self.exit)
         self.pushButton_2.clicked.connect(self.send)
+        self.pushButton_2.setEnabled(False)
 
         self.comm.game_updater.connect(self.update_game)
+        self.comm.chat_updater.connect(self.update_chat)
+        self.comm.start_game.connect(self.start_game)
+        self.comm.end_game.connect(self.end_game)
+        self.comm.continue_game.connect(self.continue_game)
 
         self.buttons_map = {}
 
@@ -229,14 +239,37 @@ class GameWindow(QMainWindow, Ui_GameWindow):
                 cell.setMinimumSize(25, 25)
                 cell.clicked.connect(lambda clicked, X=x, Y=y: self.game_clicker(X, Y))
                 cell.setStyleSheet('background-color: white; border: 1px solid black; padding: 0;')
-                self.gridLayout.addWidget(cell, x, y, 1, 1)
+                cell.setEnabled(False)
+                self.gridLayout_3.addWidget(cell, x, y, 1, 1)
                 self.buttons_map[(x, y)] = cell
 
         self.show()
 
+    def start_game(self, message):
+        self.textEdit.append(message)
+        self.pushButton_2.setEnabled(True)
+        for x in range(25):
+            for y in range(25):
+                cell = self.buttons_map[(x, y)]
+                cell.setEnabled(True)
+
+    @pyqtSlot(dict)
+    def continue_game(self, data):
+        self.textEdit.append("Игра уже идет!")
+        self.pushButton_2.setEnabled(True)
+
+        for (x, y), color in data.items():
+            cell = self.buttons_map[(x, y)]
+            cell.setStyleSheet(f'background-color: {color}; border: 1px solid black; padding: 0;')
+            cell.setEnabled(False)
+
+        for (x, y), cell in self.buttons_map.items():
+            if (x, y) not in data:
+                cell.setEnabled(True)
+
     def send(self):
         message = self.lineEdit.text()
-        self.client.send_message(dict(data='',
+        self.client.send_message(dict(data=f'{message}',
                                       msgtype='chat'))
         self.lineEdit.clear()
 
@@ -244,17 +277,30 @@ class GameWindow(QMainWindow, Ui_GameWindow):
         self.client.send_message(dict(data='',
                                       msgtype='exit'))
 
+    def end_game(self):
+        self.hide()
+        self.choose_room_window.show()
+
     def game_clicker(self, X, Y):
         print(self.color)
         self.client.send_message(dict(data=f'{X} {Y} {self.color}',
                                       msgtype='game'))
 
+    @pyqtSlot(str)
     def update_game(self, coordinates):
         x, y, color = tuple(coordinates.split())
         print(x, y, color)
         cell: QPushButton = self.buttons_map[(int(x), int(y))]
         cell.setStyleSheet(f'background-color: {color}; border: 1px solid black; padding: 0;')
         cell.setEnabled(False)
+
+    @pyqtSlot(str)
+    def update_chat(self, message):
+        self.textEdit.append(message)
+
+    @pyqtSlot()
+    def closeEvent(self, event):
+        self.exit()
 
 def main():
     app = QApplication([])
