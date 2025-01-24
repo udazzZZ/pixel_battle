@@ -65,14 +65,17 @@ class Ui_GameWindow(object):
         self.gridLayout_2 = QtWidgets.QGridLayout(self.gridLayoutWidget_2)
         self.gridLayout_2.setContentsMargins(0, 0, 0, 0)
         self.gridLayout_2.setObjectName("gridLayout_2")
-        self.textEdit = QtWidgets.QTextEdit(parent=self.gridLayoutWidget_2)
+        self.label = QtWidgets.QLabel(parent=self.gridLayoutWidget_2)
         font = QtGui.QFont()
         font.setFamily("Cascadia Code")
+        font.setPointSize(12)
         font.setBold(True)
-        self.textEdit.setFont(font)
-        self.textEdit.setStyleSheet("border: 1px solid black;")
-        self.textEdit.setObjectName("textEdit")
-        self.gridLayout_2.addWidget(self.textEdit, 1, 0, 1, 1)
+        self.label.setFont(font)
+        self.label.setStyleSheet("background-color: white;\n"
+"border: 1px solid black;")
+        self.label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
+        self.label.setObjectName("label")
+        self.gridLayout_2.addWidget(self.label, 0, 0, 1, 1)
         self.pushButton_2 = QtWidgets.QPushButton(parent=self.gridLayoutWidget_2)
         font = QtGui.QFont()
         font.setFamily("Cascadia Code")
@@ -94,6 +97,14 @@ class Ui_GameWindow(object):
 "}")
         self.pushButton_2.setObjectName("pushButton_2")
         self.gridLayout_2.addWidget(self.pushButton_2, 4, 0, 1, 1)
+        self.textEdit = QtWidgets.QTextEdit(parent=self.gridLayoutWidget_2)
+        font = QtGui.QFont()
+        font.setFamily("Cascadia Code")
+        font.setBold(True)
+        self.textEdit.setFont(font)
+        self.textEdit.setStyleSheet("border: 1px solid black;")
+        self.textEdit.setObjectName("textEdit")
+        self.gridLayout_2.addWidget(self.textEdit, 1, 0, 1, 1)
         self.lineEdit = QtWidgets.QLineEdit(parent=self.gridLayoutWidget_2)
         font = QtGui.QFont()
         font.setFamily("Cascadia Code")
@@ -105,17 +116,27 @@ class Ui_GameWindow(object):
 "margin-left: 5px;")
         self.lineEdit.setObjectName("lineEdit")
         self.gridLayout_2.addWidget(self.lineEdit, 3, 0, 1, 1)
-        self.label = QtWidgets.QLabel(parent=self.gridLayoutWidget_2)
+        self.pushButton_3 = QtWidgets.QPushButton(parent=self.gridLayoutWidget_2)
         font = QtGui.QFont()
         font.setFamily("Cascadia Code")
         font.setPointSize(12)
         font.setBold(True)
-        self.label.setFont(font)
-        self.label.setStyleSheet("background-color: white;\n"
-"border: 1px solid black;")
-        self.label.setAlignment(QtCore.Qt.AlignmentFlag.AlignCenter)
-        self.label.setObjectName("label")
-        self.gridLayout_2.addWidget(self.label, 0, 0, 1, 1)
+        self.pushButton_3.setFont(font)
+        self.pushButton_3.setStyleSheet("#pushButton_3 {\n"
+"    background-color: rgb(0, 0, 0);\n"
+"    border-radius: 5px;\n"
+"    padding: 10px 10px;\n"
+"    color: rgb(255, 255, 255);\n"
+"    margin: 10px;\n"
+"}\n"
+"#pushButton_3:hover {\n"
+"    color: rgb(0, 0, 0);\n"
+"    border: 1px  solid rgb(55, 107, 113);\n"
+"    cursor: pointer;\n"
+"    background-color: rgb(255, 255, 255);\n"
+"}")
+        self.pushButton_3.setObjectName("pushButton_3")
+        self.gridLayout_2.addWidget(self.pushButton_3, 5, 0, 1, 1)
         GameWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(parent=GameWindow)
         self.menubar.setGeometry(QtCore.QRect(0, 0, 811, 22))
@@ -132,8 +153,9 @@ class Ui_GameWindow(object):
         _translate = QtCore.QCoreApplication.translate
         GameWindow.setWindowTitle(_translate("GameWindow", "MainWindow"))
         self.pushButton.setText(_translate("GameWindow", "EXIT"))
-        self.pushButton_2.setText(_translate("GameWindow", "SEND"))
         self.label.setText(_translate("GameWindow", "01:00"))
+        self.pushButton_2.setText(_translate("GameWindow", "SEND"))
+        self.pushButton_3.setText(_translate("GameWindow", "READY"))
 
 
 if __name__ == "__main__":

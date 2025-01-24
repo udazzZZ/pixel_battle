@@ -1,6 +1,8 @@
 import socket
+import threading
 from threading import Thread
 import pickle
+import time
 
 class GameRoom:
     def __init__(self, free, name):
@@ -10,6 +12,8 @@ class GameRoom:
         self.ready_clients_count = 0
         self.clients_names: list = []
         self.colors = []
+        self.game_timer = None
+        self.timer_is_active = False
 
         self.game_state = {}
 
@@ -18,13 +22,32 @@ class GameRoom:
             if client != except_client:
                 client.send(pickle.dumps(packet))
 
-    def start_game(self):
-        self.broadcast(dict(data="Игра началась!",
-                            msgtype='start_game'))
+    def start_game(self, client):
+        if self.game_timer:
+            client.send(pickle.dumps(dict(data=self.game_state,
+                                          msgtype='continue_game')))
 
-    def continue_game(self, client):
-        client.send(pickle.dumps(dict(data=self.game_state,
-                                      msgtype='continue_game')))
+        else:
+            self.broadcast(dict(data="Игра началась! У вас есть 1 минута.\n",
+                                msgtype='start_game'))
+            self.timer_is_active = True
+            self.game_timer = threading.Thread(target=self.start_timer, args=(60,))
+            self.game_timer.start()
+
+    def start_timer(self, duration):
+        start_time = time.time()
+        while self.timer_is_active and time.time() - start_time < duration + 1:
+            update_time = duration - int(time.time() - start_time)
+            self.broadcast(dict(data=update_time,
+                                msgtype='update_timer'))
+            time.sleep(1)
+
+        if len(self.clients) > 1:
+            self.broadcast(dict(data="Время вышло.\n",
+                                msgtype='chat'))
+        self.broadcast(dict(data="",
+                            msgtype="end_game"))
+        self.end_game()
 
     def exit_room(self, client, client_name):
         print(client_name)
@@ -33,24 +56,23 @@ class GameRoom:
         self.clients_names.pop(client_idx)
         self.ready_clients_count -= 1
         self.colors.pop(client_idx)
-        self.broadcast(dict(data=f"Игрок {client_name} покинул игру.",
+        self.broadcast(dict(data=f"Игрок {client_name} покинул игру.\n",
                             msgtype='chat'),
                        client)
         client.send(pickle.dumps(dict(data='',
                                       msgtype='exit_app')))
         if len(self.clients) == 1:
-            self.end_game()
+            self.timer_is_active = False
 
     def end_game(self):
         print('Игра завершена')
-        self.broadcast(dict(data="",
-                            msgtype='end_game'))
+        self.broadcast(dict(data=60,
+                            msgtype='update_timer'))
         self.is_active = False
-
-    def timeout(self):
-        self.broadcast(dict(data="Время вышло. Игра завершена.\n"
-                                 "Итоговое изображение уже у вас.",
-                            msgtype='chat'))
+        self.game_state = {}
+        self.timer_is_active = False
+        self.game_timer = None
+        self.ready_clients_count = 0
 
 class GameServer:
     def __init__(self, host, port):
@@ -111,16 +133,23 @@ class ClientHandler(Thread):
                         self.color = data['data']
                         self.check_color(self.color)
 
-                    case 'ready':
-                        self.room.broadcast(dict(data=f'Игрок {self.name} присоединился к комнате.',
+                    case 'new_player':
+                        self.room.broadcast(dict(data=f'Игрок {self.name} присоединился к комнате.\n',
                                                  msgtype='chat'),
                                             self.client)
+
+                    case 'ready':
+                        self.room.broadcast(dict(data=f'Игрок {self.name} готов к игре.\n',
+                                                 msgtype='chat'))
                         self.room.ready_clients_count += 1
-                        if self.room.ready_clients_count == 2:
-                            self.room.start_game()
-                            print('Начинаем игру')
-                        elif self.room.ready_clients_count > 2:
-                            self.room.continue_game(self.client)
+                        if not self.room.is_active:
+                            if (self.room.ready_clients_count == len(self.room.clients) and
+                                    self.room.ready_clients_count > 1):
+                                self.room.start_game(self.client)
+                                self.room.is_active = True
+                                print('Начинаем игру')
+                        else:
+                            self.room.start_game(self.client)
 
                     case 'exit':
                         self.room.exit_room(self.client, self.name)
@@ -143,6 +172,7 @@ class ClientHandler(Thread):
 
             except (ConnectionError, OSError):
                 print(f"Игрок {self.name} отключился.")
+                print(self.room.clients)
                 break
 
     def get_free_rooms(self):
@@ -173,21 +203,8 @@ class ClientHandler(Thread):
             self.client.send(pickle.dumps(dict(data='Цвет уже занят',
                                                msgtype='color_not_free')))
 
-    # def exit_game(self, room, player, name):
-    #     packet = dict(data=f"Игрок {name} покинул игру. ",
-    #                   msgtype='chat')
-    #     room.broadcast(packet, player)
-    #     print(f"{name} disconnected")
-    #     cur_player_idx = room.clients.index(player)
-    #     room.clients.pop(cur_player_idx)
-    #     room.clients_names.pop(cur_player_idx)
-    #     room.ready_clients_count -= 1
-    #     room.colors.pop(cur_player_idx)
-    #     self.client.send(pickle.dumps(dict(data='',
-    #                                        msgtype='end_game')))
-
 def main():
-    game_server = GameServer('127.0.0.1', port=3434)
+    game_server = GameServer('127.0.0.1', port=3435)
     game_server.start()
 
 

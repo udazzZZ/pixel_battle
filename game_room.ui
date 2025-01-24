@@ -87,16 +87,24 @@ QLineEdit {
      </rect>
     </property>
     <layout class="QGridLayout" name="gridLayout_2">
-     <item row="1" column="0">
-      <widget class="QTextEdit" name="textEdit">
+     <item row="0" column="0">
+      <widget class="QLabel" name="label">
        <property name="font">
         <font>
          <family>Cascadia Code</family>
+         <pointsize>12</pointsize>
          <bold>true</bold>
         </font>
        </property>
        <property name="styleSheet">
-        <string notr="true">border: 1px solid black;</string>
+        <string notr="true">background-color: white;
+border: 1px solid black;</string>
+       </property>
+       <property name="text">
+        <string>01:00</string>
+       </property>
+       <property name="alignment">
+        <set>Qt::AlignCenter</set>
        </property>
       </widget>
      </item>
@@ -129,6 +137,19 @@ QLineEdit {
        </property>
       </widget>
      </item>
+     <item row="1" column="0">
+      <widget class="QTextEdit" name="textEdit">
+       <property name="font">
+        <font>
+         <family>Cascadia Code</family>
+         <bold>true</bold>
+        </font>
+       </property>
+       <property name="styleSheet">
+        <string notr="true">border: 1px solid black;</string>
+       </property>
+      </widget>
+     </item>
      <item row="3" column="0">
       <widget class="QLineEdit" name="lineEdit">
        <property name="font">
@@ -145,8 +166,8 @@ margin-left: 5px;</string>
        </property>
       </widget>
      </item>
-     <item row="0" column="0">
-      <widget class="QLabel" name="label">
+     <item row="5" column="0">
+      <widget class="QPushButton" name="pushButton_3">
        <property name="font">
         <font>
          <family>Cascadia Code</family>
@@ -155,14 +176,22 @@ margin-left: 5px;</string>
         </font>
        </property>
        <property name="styleSheet">
-        <string notr="true">background-color: white;
-border: 1px solid black;</string>
+        <string notr="true">#pushButton_3 {
+	background-color: rgb(0, 0, 0);
+	border-radius: 5px;
+	padding: 10px 10px;
+	color: rgb(255, 255, 255);
+	margin: 10px;
+}
+#pushButton_3:hover {
+	color: rgb(0, 0, 0);
+	border: 1px  solid rgb(55, 107, 113);
+	cursor: pointer;
+	background-color: rgb(255, 255, 255);
+}</string>
        </property>
        <property name="text">
-        <string>01:00</string>
-       </property>
-       <property name="alignment">
-        <set>Qt::AlignCenter</set>
+        <string>READY</string>
        </property>
       </widget>
      </item>

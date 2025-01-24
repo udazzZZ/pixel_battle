@@ -2,9 +2,13 @@ import socket
 import pickle
 import threading
 import time
+import os
 
-from PyQt6.QtCore import pyqtSignal, QObject, pyqtSlot
-from PyQt6.QtWidgets import QApplication, QMainWindow, QColorDialog, QPushButton
+from PyQt6.QtCore import pyqtSignal, QObject, pyqtSlot, QRectF, Qt
+from PyQt6.QtWidgets import (QApplication, QMainWindow,
+                             QColorDialog, QPushButton,
+                             QWidget, QLabel, QVBoxLayout)
+from PyQt6.QtGui import QImage, QPainter, QPixmap
 from queue import Queue
 from registration import Ui_Registration
 from choose_room_window import Ui_RoomWindow
@@ -26,6 +30,7 @@ class Communication(QObject):
     end_game = pyqtSignal()
     continue_game = pyqtSignal(dict)
     exit_app = pyqtSignal()
+    update_timer = pyqtSignal(int)
 
 class GameClient:
     def __init__(self, host, port, communication):
@@ -95,6 +100,9 @@ class GameClient:
                     case 'exit_app':
                         self.comm.exit_app.emit()
 
+                    case 'update_timer':
+                        self.comm.update_timer.emit(data['data'])
+
             except (ConnectionError, OSError):
                 print("Вы были отключены от сервера.")
                 self.isConnected = False
@@ -105,7 +113,7 @@ class Registration(QMainWindow, Ui_Registration):
     def __init__(self):
         super().__init__()
         self.comm = Communication()
-        self.client = GameClient('127.0.0.1', 3434, self.comm)
+        self.client = GameClient('127.0.0.1', 3435, self.comm)
         self.name: str = ''
         self.room: str = ''
         self.setupUi(self)
@@ -187,7 +195,7 @@ class Color(QMainWindow, Ui_ChooseColorWindow):
                                self.room,
                                self.selected_color)
         self.client.send_message(dict(data='',
-                                      msgtype='ready'))
+                                      msgtype='new_player'))
         self.hide()
 
     def color_window_open(self):
@@ -218,13 +226,19 @@ class GameWindow(QMainWindow, Ui_GameWindow):
         self.name = name
         self.room = room
         self.color = color
+        self.image_window = None
         self.setupUi(self)
 
         self.setWindowTitle(f"{self.room}. {self.name}")
+        self.textEdit.append('Добро пожаловать в игру!\n'
+                             'Условия для начала игры:\n'
+                             '1. Количество игроков >= 2\n'
+                             '2. Все игроки нажали на кнопку "Ready"\n')
         self.lineEdit.setPlaceholderText("Введите сообщение...")
         self.pushButton.clicked.connect(self.exit)
         self.pushButton_2.clicked.connect(self.send)
         self.pushButton_2.setEnabled(False)
+        self.pushButton_3.clicked.connect(self.ready)
 
         self.comm.game_updater.connect(self.update_game)
         self.comm.chat_updater.connect(self.update_chat)
@@ -232,6 +246,7 @@ class GameWindow(QMainWindow, Ui_GameWindow):
         self.comm.end_game.connect(self.end_game)
         self.comm.continue_game.connect(self.continue_game)
         self.comm.exit_app.connect(self.exit_app)
+        self.comm.update_timer.connect(self.update_timer)
 
         self.buttons_map = {}
 
@@ -247,6 +262,11 @@ class GameWindow(QMainWindow, Ui_GameWindow):
                 self.buttons_map[(x, y)] = cell
 
         self.show()
+
+    def ready(self):
+        self.client.send_message(dict(data='',
+                                      msgtype='ready'))
+        self.pushButton_3.setEnabled(False)
 
     def start_game(self, message):
         self.textEdit.append(message)
@@ -281,18 +301,33 @@ class GameWindow(QMainWindow, Ui_GameWindow):
                                       msgtype='exit'))
 
     def end_game(self):
-        self.textEdit.append("Игра окончена!")
-        for x in range(25):
-            for y in range(25):
-                cell = self.buttons_map[(x, y)]
-                cell.setStyleSheet('background-color: white; border: 1px solid black; padding: 0;')
-                cell.setEnabled(False)
-        self.pushButton_2.setEnabled(False)
+        try:
+            self.textEdit.append('Игра завершена! Чтобы начать новую игру, все '
+                                 'должны быть к ней готовы :)\n')
+            path = self.save_field_as_image()
+            if path and os.path.exists(path):
+                self.image_window = ImageWindow(QPixmap(path), self.name)
+            else:
+                print("Failed to save or locate the image. No window will be shown.")
+            for x in range(25):
+                for y in range(25):
+                    cell = self.buttons_map[(x, y)]
+                    cell.setStyleSheet('background-color: white; border: 1px solid black; padding: 0;')
+                    cell.setEnabled(False)
+            self.pushButton_2.setEnabled(False)
+            self.pushButton_3.setEnabled(True)
+
+        except Exception as e:
+            print(f"Error in end_game: {e}")
 
     def game_clicker(self, X, Y):
         print(self.color)
         self.client.send_message(dict(data=f'{X} {Y} {self.color}',
                                       msgtype='game'))
+
+    @pyqtSlot(int)
+    def update_timer(self, new_time):
+        self.label.setText(f'You have {new_time} seconds')
 
     @pyqtSlot(str)
     def update_game(self, coordinates):
@@ -313,7 +348,63 @@ class GameWindow(QMainWindow, Ui_GameWindow):
     @pyqtSlot()
     def exit_app(self):
         self.hide()
-        self.choose_room_window.show()
+        path = self.save_field_as_image()
+        self.image_window = ImageWindow(QPixmap(path), self.name, self.choose_room_window)
+
+    def save_field_as_image(self):
+        # Размер изображения на основе сетки
+        width = 25 * 25  # 25 кнопок по ширине, каждая 25px
+        height = 25 * 25  # 25 кнопок по высоте, каждая 25px
+
+        # Создаем изображение
+        image = QImage(width, height, QImage.Format.Format_RGB32)
+        image.fill(Qt.GlobalColor.white)
+
+        # Рисуем кнопки
+        painter = QPainter(image)
+        for x in range(25):
+            for y in range(25):
+                cell: QPushButton = self.buttons_map[(x, y)]
+                rect = QRectF(x * 25, y * 25, 25, 25)  # Создаем QRectF
+                pixmap = cell.grab()  # Снимок кнопки
+                painter.drawPixmap(rect.toRect(), pixmap)  # Преобразуем QRectF в QRect
+        painter.end()
+
+        # Сохраняем изображение
+        image_path = f"{self.name}.png"
+        success = image.save(image_path)
+
+        if success:
+            return image_path
+        else:
+            print("Ошибка сохранения изображения.")
+            return None
+
+
+class ImageWindow(QWidget):
+    def __init__(self, pixmap: QPixmap, name, next_window=None):
+        super().__init__()
+        self.next_window = next_window
+        self.name = name
+        self.setWindowTitle(f"Просмотр изображения: {self.name}")
+
+        self.image_label = QLabel(self)
+        self.image_label.setPixmap(pixmap)
+
+        self.image_label.setScaledContents(True)
+        self.resize(pixmap.width(), pixmap.height())
+
+        layout = QVBoxLayout()
+        layout.addWidget(self.image_label)
+        self.setLayout(layout)
+
+        self.show()
+
+    @pyqtSlot()
+    def closeEvent(self, event):
+        self.hide()
+        if self.next_window:
+            self.next_window.show()
 
 def main():
     app = QApplication([])
