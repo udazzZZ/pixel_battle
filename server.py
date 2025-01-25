@@ -65,7 +65,8 @@ class GameRoom:
         client_idx = self.clients.index(client)
         self.clients.pop(client_idx)
         self.clients_names.pop(client_idx)
-        self.ready_clients_count -= 1
+        if self.ready_clients_count != 0:
+            self.ready_clients_count -= 1
         self.colors.pop(client_idx)
         self.broadcast(dict(data=f"Игрок {client_name} покинул игру.\n",
                             msgtype='chat'),

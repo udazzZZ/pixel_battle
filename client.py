@@ -208,6 +208,7 @@ class Color(QMainWindow, Ui_ChooseColorWindow):
     def can_not_join(self, message):
         self.choose_room_text.clear()
         self.choose_room_text.append(message)
+        self.button_send.setEnabled(False)
 
     @pyqtSlot()
     def exit_color_window(self):
@@ -361,10 +362,10 @@ class GameWindow(QMainWindow, Ui_GameWindow):
         image.fill(Qt.GlobalColor.white)
 
         painter = QPainter(image)
-        for x in range(25):
-            for y in range(25):
+        for y in range(25):
+            for x in range(25):
                 cell: QPushButton = self.buttons_map[(x, y)]
-                rect = QRect(x * 25, y * 25, 25, 25)
+                rect = QRect(y * 25, x * 25, 25, 25)
                 pixmap = cell.grab()
                 painter.drawPixmap(rect, pixmap)
         painter.end()
