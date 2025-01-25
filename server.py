@@ -144,6 +144,7 @@ class ClientHandler(Thread):
                         self.check_color(self.color)
 
                     case 'new_player':
+                        self.room.colors.append(self.color)
                         self.room.broadcast(dict(data=f'Игрок {self.name} присоединился к комнате.\n',
                                                  msgtype='chat'),
                                             self.client)
@@ -204,7 +205,6 @@ class ClientHandler(Thread):
 
     def check_color(self, color):
         if color not in self.room.colors:
-            self.room.colors.append(color)
             self.client.send(pickle.dumps(dict(data='',
                                                msgtype='color_free')))
         else:
