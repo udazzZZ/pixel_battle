@@ -25,6 +25,7 @@ class Communication(QObject):
     continue_game = pyqtSignal(dict)
     exit_app = pyqtSignal()
     update_timer = pyqtSignal(int)
+    exit_color_window = pyqtSignal()
 
 class GameClient:
     def __init__(self, host, port, communication):
@@ -92,6 +93,9 @@ class GameClient:
 
                     case 'update_timer':
                         self.comm.update_timer.emit(data['data'])
+
+                    case 'exit_color_window':
+                        self.comm.exit_color_window.emit()
 
             except (ConnectionError, OSError):
                 print("Вы были отключены от сервера.")
@@ -172,6 +176,7 @@ class Color(QMainWindow, Ui_ChooseColorWindow):
 
         self.comm.color_free.connect(self.can_join)
         self.comm.color_not_free.connect(self.can_not_join)
+        self.comm.exit_color_window.connect(self.exit_color_window)
 
         self.show()
 
@@ -203,6 +208,14 @@ class Color(QMainWindow, Ui_ChooseColorWindow):
     def can_not_join(self, message):
         self.choose_room_text.clear()
         self.choose_room_text.append(message)
+
+    @pyqtSlot()
+    def exit_color_window(self):
+        self.close()
+
+    def closeEvent(self, event):
+        self.client.send_message(dict(data='',
+                                      msgtype='exit_color_window'))
 
 class GameWindow(QMainWindow, Ui_GameWindow):
     def __init__(self, choose_room_window, comm, client, name, room, color):
