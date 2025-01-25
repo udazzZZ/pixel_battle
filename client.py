@@ -1,10 +1,9 @@
 import socket
 import pickle
 import threading
-import time
 import os
 
-from PyQt6.QtCore import pyqtSignal, QObject, pyqtSlot, QRectF, Qt
+from PyQt6.QtCore import pyqtSignal, QObject, pyqtSlot, QRect, Qt
 from PyQt6.QtWidgets import (QApplication, QMainWindow,
                              QColorDialog, QPushButton,
                              QWidget, QLabel, QVBoxLayout)
@@ -14,11 +13,6 @@ from registration import Ui_Registration
 from choose_room_window import Ui_RoomWindow
 from choose_color_window import Ui_ChooseColorWindow
 from game_room import Ui_GameWindow
-
-# TODO:
-# EXIT
-# TIMER
-# отправлять изображение клиентам после конца игры
 
 class Communication(QObject):
     free_rooms_updater = pyqtSignal(list)
@@ -39,7 +33,6 @@ class GameClient:
         self.isConnected = True
         self.queue = Queue()
         self.comm = communication
-        self.selected_colors = []
 
         threading.Thread(target=self.receive_messages, daemon=True).start()
         threading.Thread(target=self.send_msg, daemon=True).start()
@@ -85,9 +78,6 @@ class GameClient:
                     case 'end_game':
                         self.comm.end_game.emit()
 
-                    case 'selected_colors':
-                        self.selected_colors.append(data['data'])
-
                     case 'color_free':
                         self.comm.color_free.emit()
 
@@ -115,7 +105,7 @@ class Registration(QMainWindow, Ui_Registration):
         self.comm = Communication()
         self.client = GameClient('127.0.0.1', 3435, self.comm)
         self.name: str = ''
-        self.room: str = ''
+        self.room: Room | None = None
         self.setupUi(self)
 
         self.reg_input.setPlaceholderText("Введите свое имя...")
@@ -145,17 +135,16 @@ class Room(QMainWindow, Ui_RoomWindow):
         self.comm = comm
         self.client = client
         self.rooms = rooms
-        self.color = None
+        self.color: Color | None = None
         self.setupUi(self)
         self.setWindowTitle(name)
         self.list_of_rooms.addItems(rooms)
-        self.room = ''
+        self.room: str = ''
         self.show()
 
         self.button_send.clicked.connect(self.room_is_selected)
 
     def room_is_selected(self):
-        print('комната выбрана')
         self.room = self.list_of_rooms.currentText()
         self.client.send_message(dict(data=self.room,
                                       msgtype='room'))
@@ -171,7 +160,7 @@ class Color(QMainWindow, Ui_ChooseColorWindow):
         self.client = client
         self.name = name
         self.selected_color = ''
-        self.game = None
+        self.game: GameWindow | None = None
         self.room = room
         self.setupUi(self)
 
@@ -187,7 +176,6 @@ class Color(QMainWindow, Ui_ChooseColorWindow):
         self.show()
 
     def join_game(self):
-        print('Окно создано')
         self.game = GameWindow(self.choose_room_window,
                                self.comm,
                                self.client,
@@ -201,7 +189,6 @@ class Color(QMainWindow, Ui_ChooseColorWindow):
     def color_window_open(self):
         color = QColorDialog.getColor()
         self.selected_color = color.name()
-        print(self.selected_color)
         self.client.send_message(dict(data=self.selected_color,
                                       msgtype='color'))
         self.label.setStyleSheet(f"background-color: {color.name()}")
@@ -227,6 +214,7 @@ class GameWindow(QMainWindow, Ui_GameWindow):
         self.room = room
         self.color = color
         self.image_window = None
+        self.field_is_empty = True
         self.setupUi(self)
 
         self.setWindowTitle(f"{self.room}. {self.name}")
@@ -237,7 +225,6 @@ class GameWindow(QMainWindow, Ui_GameWindow):
         self.lineEdit.setPlaceholderText("Введите сообщение...")
         self.pushButton.clicked.connect(self.exit)
         self.pushButton_2.clicked.connect(self.send)
-        self.pushButton_2.setEnabled(False)
         self.pushButton_3.clicked.connect(self.ready)
 
         self.comm.game_updater.connect(self.update_game)
@@ -268,9 +255,9 @@ class GameWindow(QMainWindow, Ui_GameWindow):
                                       msgtype='ready'))
         self.pushButton_3.setEnabled(False)
 
+    @pyqtSlot(str)
     def start_game(self, message):
         self.textEdit.append(message)
-        self.pushButton_2.setEnabled(True)
         for x in range(25):
             for y in range(25):
                 cell = self.buttons_map[(x, y)]
@@ -279,7 +266,6 @@ class GameWindow(QMainWindow, Ui_GameWindow):
     @pyqtSlot(dict)
     def continue_game(self, data):
         self.textEdit.append("Игра уже идет!")
-        self.pushButton_2.setEnabled(True)
 
         for (x, y), color in data.items():
             cell = self.buttons_map[(x, y)]
@@ -314,14 +300,13 @@ class GameWindow(QMainWindow, Ui_GameWindow):
                     cell = self.buttons_map[(x, y)]
                     cell.setStyleSheet('background-color: white; border: 1px solid black; padding: 0;')
                     cell.setEnabled(False)
-            self.pushButton_2.setEnabled(False)
             self.pushButton_3.setEnabled(True)
+            self.field_is_empty = True
 
         except Exception as e:
             print(f"Error in end_game: {e}")
 
     def game_clicker(self, X, Y):
-        print(self.color)
         self.client.send_message(dict(data=f'{X} {Y} {self.color}',
                                       msgtype='game'))
 
@@ -331,6 +316,7 @@ class GameWindow(QMainWindow, Ui_GameWindow):
 
     @pyqtSlot(str)
     def update_game(self, coordinates):
+        self.field_is_empty = False
         x, y, color = tuple(coordinates.split())
         print(x, y, color)
         cell: QPushButton = self.buttons_map[(int(x), int(y))]
@@ -347,30 +333,29 @@ class GameWindow(QMainWindow, Ui_GameWindow):
 
     @pyqtSlot()
     def exit_app(self):
-        self.hide()
-        path = self.save_field_as_image()
-        self.image_window = ImageWindow(QPixmap(path), self.name, self.choose_room_window)
+        self.deleteLater()
+        if not self.field_is_empty:
+            path = self.save_field_as_image()
+            self.image_window = ImageWindow(QPixmap(path), self.name, self.choose_room_window)
+        else:
+            self.choose_room_window.show()
 
     def save_field_as_image(self):
-        # Размер изображения на основе сетки
-        width = 25 * 25  # 25 кнопок по ширине, каждая 25px
-        height = 25 * 25  # 25 кнопок по высоте, каждая 25px
+        width = 25 * 25
+        height = 25 * 25
 
-        # Создаем изображение
         image = QImage(width, height, QImage.Format.Format_RGB32)
         image.fill(Qt.GlobalColor.white)
 
-        # Рисуем кнопки
         painter = QPainter(image)
         for x in range(25):
             for y in range(25):
                 cell: QPushButton = self.buttons_map[(x, y)]
-                rect = QRectF(x * 25, y * 25, 25, 25)  # Создаем QRectF
-                pixmap = cell.grab()  # Снимок кнопки
-                painter.drawPixmap(rect.toRect(), pixmap)  # Преобразуем QRectF в QRect
+                rect = QRect(x * 25, y * 25, 25, 25)
+                pixmap = cell.grab()
+                painter.drawPixmap(rect, pixmap)
         painter.end()
 
-        # Сохраняем изображение
         image_path = f"{self.name}.png"
         success = image.save(image_path)
 
@@ -402,7 +387,7 @@ class ImageWindow(QWidget):
 
     @pyqtSlot()
     def closeEvent(self, event):
-        self.hide()
+        self.deleteLater()
         if self.next_window:
             self.next_window.show()
 

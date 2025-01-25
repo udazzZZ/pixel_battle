@@ -5,7 +5,7 @@ import pickle
 import time
 
 class GameRoom:
-    def __init__(self, free, name):
+    def __init__(self, name):
         self.is_active: bool = False
         self.name: str = name
         self.clients: list = []
@@ -50,7 +50,6 @@ class GameRoom:
         self.end_game()
 
     def exit_room(self, client, client_name):
-        print(client_name)
         client_idx = self.clients.index(client)
         self.clients.pop(client_idx)
         self.clients_names.pop(client_idx)
@@ -65,7 +64,6 @@ class GameRoom:
             self.timer_is_active = False
 
     def end_game(self):
-        print('Игра завершена')
         self.broadcast(dict(data=60,
                             msgtype='update_timer'))
         self.is_active = False
@@ -80,9 +78,9 @@ class GameServer:
         self.socket.bind((host, port))
         self.socket.listen(5)
         self.is_server_active: bool = True
-        self.rooms = [GameRoom(True, 'Room1'),
-                      GameRoom(True, 'Room2'),
-                      GameRoom(True, 'Room3')]
+        self.rooms = [GameRoom('Room1'),
+                      GameRoom('Room2'),
+                      GameRoom('Room3')]
         self.package_template = {'data': '', 'msgtype': ''}
 
     def start(self):
@@ -126,7 +124,6 @@ class ClientHandler(Thread):
                                                            msgtype='free_rooms')))
 
                     case 'room':
-                        print('Комната получена'.format(data['data']))
                         self.join_room(data['data'])
 
                     case 'color':
@@ -147,7 +144,6 @@ class ClientHandler(Thread):
                                     self.room.ready_clients_count > 1):
                                 self.room.start_game(self.client)
                                 self.room.is_active = True
-                                print('Начинаем игру')
                         else:
                             self.room.start_game(self.client)
 
@@ -155,8 +151,6 @@ class ClientHandler(Thread):
                         self.room.exit_room(self.client, self.name)
 
                     case 'game':
-                        print('Нажата кнопка')
-                        print(data['data'])
                         x, y, color = tuple(data['data'].split())
                         self.room.game_state[(int(x), int(y))] = color
                         self.room.broadcast(dict(data='{}'.format(data['data']),
@@ -193,7 +187,6 @@ class ClientHandler(Thread):
                 break
 
     def check_color(self, color):
-        print(color)
         if color not in self.room.colors:
             self.room.colors.append(color)
             self.client.send(pickle.dumps(dict(data='',
