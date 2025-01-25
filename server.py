@@ -49,6 +49,18 @@ class GameRoom:
                             msgtype="end_game"))
         self.end_game()
 
+    def exit_color_window(self, client, client_name):
+        client_idx = self.clients.index(client)
+        if len(self.colors) == len(self.clients):
+            self.colors.pop(client_idx)
+        self.clients.pop(client_idx)
+        self.clients_names.pop(client_idx)
+        self.broadcast(dict(data=f"Игрок {client_name} покинул комнату.\n",
+                            msgtype='chat'),
+                       client)
+        client.send(pickle.dumps(dict(data='',
+                                      msgtype='exit_color_window')))
+
     def exit_room(self, client, client_name):
         client_idx = self.clients.index(client)
         self.clients.pop(client_idx)
@@ -163,6 +175,9 @@ class ClientHandler(Thread):
                                             self.client)
                         self.client.send(pickle.dumps(dict(data=f'You: {message}',
                                                            msgtype='chat')))
+
+                    case 'exit_color_window':
+                        self.room.exit_color_window(self.client, self.name)
 
             except (ConnectionError, OSError):
                 print(f"Игрок {self.name} отключился.")
